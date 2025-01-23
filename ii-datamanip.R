@@ -3,19 +3,6 @@
 
 #Import data using the naturecounts R package. 
 
-#first look in file. If it does not exist, download from database.
-if(collection =="ABOWLS"){
-  
-data<-read.csv("data/ABOWLS_BMDE.csv")
-
-#Now that the data are downloaded we will want to select the columns needed for the analysis. You may not have all the variables below if you didn't change the `field_set` to "extend". That is OK! You may not need all the auxiliary data for your analytical purposes.
-data$ProtocolCode<-data$protocol_id
-in.data<-data %>% select(SamplingEventIdentifier, SurveyAreaIdentifier, Locality, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, EffortUnits1, EffortMeasurement1, species_id, CommonName, ScientificName, Latitude, Longitude, bcr, StateProvince, ObservationCount, ObservationCount2, ObservationCount3) %>% dplyr::rename(latitude = Latitude, longitude = Longitude)
-in.data$RouteIdentifier<-in.data$SiteCode
-in.data$SiteCode<-in.data$SurveyAreaIdentifier
-
-} else{
- 
 data <-try(read.csv(paste(dat.dir, collection, ".RawData.csv", sep = "")), silent = T)
 
 if(class(data) == 'try-error'){
@@ -26,7 +13,7 @@ if(class(data) == 'try-error'){
   if(collection == "MBOWLS"){
     data<-data %>% filter (protocol_id != 29) #remove old MB data collected under an old protcol
   }
-  }
+  
 
 #Now that the data are downloaded we will want to select the columns needed for the analysis. You may not have all the variables below if you didn't change the `field_set` to "extend". That is OK! You may not need all the auxiliary data for your analytical purposes.
 in.data<-data %>% select(SamplingEventIdentifier, SurveyAreaIdentifier,RouteIdentifier, Locality, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, EffortUnits1, EffortMeasurement1, EffortUnits3, EffortMeasurement3, EffortUnits5, EffortMeasurement5, EffortUnits11, EffortMeasurement11, EffortUnits14, EffortMeasurement14, species_id, CommonName, ScientificName, latitude, longitude, bcr, StateProvince, ObservationDescriptor, ObservationCount, ObservationDescriptor2, ObservationCount2,ObservationDescriptor3, ObservationCount3)
