@@ -76,11 +76,3 @@ source("iii-QCAnalysis.R")
 
 ```
 
-## Plot Trends 
-
-```{r Plot trends}
-
-source("iv_plots.R")
-
-```
-

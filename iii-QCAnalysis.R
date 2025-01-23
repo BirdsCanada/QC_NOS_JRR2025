@@ -16,39 +16,6 @@ events<-events %>%filter(RouteIdentifier != "QC112")
 
 loc.dat<-read.csv("output/QCOWLSMap.csv") 
 
-out.dir<-"output/QC/"
-
-
-#Posterior Summary
-post_sum<- as.data.frame(matrix(data = NA, nrow = 1, ncol = 13, byrow = FALSE, dimnames = NULL))
-names(post_sum) <- c("alpha_i", "alph", "alph_ll", "alph_ul", "alph_iw", "tau", "tau_ll", "tau_ul", "tau_iw", "tau_sig", "tau_prob0", "id", "taxa_code")
-write.table(post_sum, file = paste(out.dir, "PosteriorSummary.csv", sep=""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
-post_sum2<- as.data.frame(matrix(data = NA, nrow = 1, ncol = 9, byrow = FALSE, dimnames = NULL))
-names(post_sum2) <- c("RouteIdentifier", "alph", "tau", "lower_ci", "upper_ci", "easting", "northing", "species_id", "CommonName")
-write.table(post_sum2, file = paste(out.dir, "PosteriorSummaryRoute.csv", sep=""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
-#Output for SoBC import
-indices.csv <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 15, byrow = FALSE,
-                                    dimnames = NULL))
-names(indices.csv) <- c("results_code", "version", "area_code", "season", "period", "species_code", "species_id", "year", "index", "stderr", "stdev", "upper_ci", "lower_ci", "LOESS_index", "trend_index")
-
-
-write.table(indices.csv, file = paste(out.dir, 
-                                      "NOS_AnnualIndices",".csv", sep = ""), 
-            row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
-
-## Create text file for trends 
-trends.csv <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 38, 
-                                   byrow = FALSE, dimnames = NULL))
-names(trends.csv) <- c("results_code",	"version",	"area_code",	"season",	"period", "species_code",	"species_id",	"years", "year_start",	"year_end",	"trnd",	"lower_ci", "upper_ci", "stderr",	"model_type",	"model_fit",	"percent_change",	"percent_change_low",	"percent_change_high",	"prob_decrease_0",	"prob_decrease_25",	"prob_decrease_30",	"prob_decrease_50",	"prob_increase_0",	"prob_increase_33",	"prob_increase_100", "suitability", "precision_num",	"precision_cat",	"coverage_num",	"coverage_cat",	"sample_size", "sample_size_units", "prob_LD", "prob_MD", "prob_LC", "prob_MI", "prob_LI")
-
-#Slope Trends
-write.table(trends.csv, file = paste(out.dir,  
-                                     "NOS_TrendsSlope", ".csv", sep = ""), 
-            row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
 #Make Spatial Grid for iCAR Analysis
 
 events<-events %>% filter(survey_year>=min.yr & survey_year<=max.yr)
@@ -436,10 +403,6 @@ for(m in 1:length(sp.list)) {
   #   predicted_counts[i, ] <- exp(fixed_effects + random_effects_alpha + random_effects_tau * sp.data$std_yr + random_effects_kappa)
   # }
   
-  
-  # View the probabilities
-  print(probability_tau_negative)
-  
   #output for SoBC. This is clunky, but clear. 
   tau_prov <- tau_prov %>% mutate( 
     results_code="OWLS",
@@ -654,176 +617,7 @@ for(m in 1:length(sp.list)) {
 } # end species analysis loop
 
 
-# read in trend output
-#add species English and French name
-sp.name<-meta_species_taxonomy()
-sp.name<-sp.name %>% select(species_id, english_name, french_name)
-
-trnd <- read.csv("output/QC/NOS_TrendsSlope.csv")
-trnd<- left_join(trnd, sp.name, by="species_id")
-
-trnd <- trnd %>% drop_na(results_code)
-
-trnd <- trnd %>% select(species_id, area_code, english_name, french_name, trnd, lower_ci, upper_ci) %>%
-  mutate(sp.trnd = paste(english_name, "/", " \n", french_name, "\n ", round(trnd, digits = 2),  
-                         " (", round(lower_ci, digits = 2), ", ",
-                         round(upper_ci, digits = 2), ")"))
-trnd<-trnd %>% select(-trnd, -lower_ci, -upper_ci)
-
-# read in annual index output
-index <- read.csv(paste("output/QC/NOS_AnnualIndices.csv"))
-index<- left_join(index, sp.name, by="species_id")
-
-index <- index %>%
-  filter(!is.na(results_code)) %>% dplyr::select(index, lower_ci, upper_ci, LOESS_index, trend_index, 
-                                                 species_code, year, area_code, species_id,
-                                                 english_name, french_name)
-
-plot.dat<-NULL
-plot.dat <- full_join(index, trnd, by = c("area_code", "species_id", "english_name", "french_name"), multiple="all")
-
-plot.dat <-plot.dat %>% filter(area_code %in% c("QC")) 
-
-ggplot(data = plot.dat, aes(x = as.numeric(year), y = index)) +
-  facet_wrap(~ sp.trnd, ncol = 2, scales = "free", as.table = TRUE) +
-  geom_pointrange(aes(ymin = lower_ci, ymax = upper_ci)) +
-  geom_smooth(aes(ymin = lower_ci, ymax = upper_ci), method = "loess", alpha = 0.1) + 
-  xlab("Year") +
-  ylab("Annual Index") +
-  scale_shape_manual(values = c(1,2)) +
-  #scale_y_continuous(trans='log10') +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  theme(legend.position = "none")+
-  theme_classic()+
-  theme(text=element_text(size=20))
-
-# plot theme
-# map theme
-theme_map <- function(base_size = 9, base_family = "") {
-  theme_bw(base_size = base_size, base_family = base_family) %+replace%
-    theme(axis.line = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          axis.title = element_blank(),
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid = element_blank(),
-          panel.spacing = unit(0, "lines"),
-          plot.background = element_blank(),
-          legend.background=element_rect(fill=NA, colour=NA),
-          legend.direction="vertical",
-          legend.key=element_rect(fill=NA, colour="white"),
-          legend.text.align=1,
-          legend.text = element_text(size=9),
-          # legend.title=element_text(hjust=0, size=11),
-          legend.justification=c(0, 0.5),
-          plot.title = element_text(size=14, hjust = 0.7))
-}
-
-
-#Make Spatial Grid for iCAR Analysis
-test<-events %>% select(latitude, longitude) %>% distinct()
-
-xy<-st_as_sf(test, coords = c("longitude", "latitude"))
-st_crs(xy)<-"+proj=longlat +datum=NAD83"
-
-#all grid for North American
-poly<- read_sf(dsn="C:/Users/ethie/Documents/ethier-scripts/National-NOS/data", layer="nos_na_grid")
-
-#sf point
-newCRS<-st_crs(poly)
-xy<-st_transform(xy, newCRS)
-
-xy<-st_transform(xy, newCRS) #transform 
-Grid <- poly %>% st_filter(xy, .pred = st_intersects)
-
-qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") %>% st_transform(newCRS) #pull in the background map
-qq<-qq %>% filter(name=="Québec")
-
-
-#Prepare study area map
-
-p1<-ggplot()+ 
-  geom_sf(data=Grid, aes(), size=0.3) +
-  geom_sf(data=xy, aes(), size=1)+
-  geom_sf(data = qq, fill = NA) +
-  theme_map() + theme(panel.grid.major=element_line(colour="transparent"))
-
-p1 +
-  ggspatial::annotation_scale(
-    location = "tr",
-    bar_cols = c("black", "white")
-    #text_family = "ArcherPro Book"
-  ) +
-  ggspatial::annotation_north_arrow(
-    location = "tr", which_north = "true",
-    pad_x = unit(0.4, "in"), pad_y = unit(0.4, "in"),
-    # style = ggspatial::north_arrow_nautical(
-    #  fill = c("grey40", "white"),
-    #  line_col = "grey20",
-    #  text_family = "ArcherPro Book"
-    #)
-  )
-
-
-# make cell level maps ---------------------------------------------------------
-#compile the trend outputs
-pot_est<-trnd <- read.csv("output/QC/PosteriorSummary.csv")
-pot<-pot_est %>% select(alph, tau, tau_sig, tau_prob0, id, taxa_code)
-pot<-pot %>% drop_na()
-
-results_cells <- merge(Grid, pot, by="id", all=F)
-res_sf <- as(results_cells, "sf") 
-sp.list<-unique(res_sf$taxa_code)
-
-range_grid<-pot %>% group_by(taxa_code) %>% summarise(meanalph=mean(alph), minalph=min(alph), maxalph=max(alph), meantau = mean(tau), mintau_prob0 = min(tau), maxtau_prob0=max(tau))
-write.csv(range_grid, "output/QC/Range_Grid.csv")
-
-tau_R<-pot
-
-for(m in 1:length(sp.list)) {
-  #m<-1 #for testing each species
-  
-  plot.data <-NULL 
-  plot.data <- res_sf %>% filter(taxa_code %in% sp.list[m])
-  
-  tau_sp<-NULL
-  tau_sp<-tau_R %>% filter(taxa_code %in% sp.list[m])
-  
-  # map tau
-  tau_p1 <- ggplot() +
-    geom_sf(data = qq, fill = NA) +
-    # annotation_map_tile(type = "osm", zoomin = 0) +
-    geom_sf(data=Grid, aes(), size=0.3) +
-    geom_sf(data=plot.data, aes(fill=tau_prob0), col="gray40", size=0.3) +
-    scale_fill_gradient2("Tau\n(% per year)", low = ("red4"),
-                         mid = "white",
-                         high = ("royalblue4"), midpoint = 0, space = "Lab",
-                         na.value = "grey40", guide = "colourbar") +
-    geom_sf(data = qq, fill = NA) +
-    theme_map() + theme(panel.grid.major=element_line(colour="transparent"))
-  
-  # print cell maps
-  ggsave(paste(out.dir, sp.list[m], "TauGridPlot.jpeg"), plot=tau_p1)
-  
-  
-  # map alpha
-  alph_p1 <- ggplot() +
-    geom_sf(data=Grid, aes(), size=0.3) +
-    # annotation_map_tile(type = "osm", zoomin = 0) +
-    geom_sf(data=plot.data, aes(fill=alph), col="gray40", size=0.3) +
-    scale_fill_gradient2("Alpha", low = "orange", mid = "white",
-                         high = "green4", midpoint = 0, space = "Lab",
-                         na.value = "grey40", guide = "colourbar") +
-    geom_sf(data = qq, fill = NA) +
-    theme_map() + theme(panel.grid.major=element_line(colour="transparent"))
-  
-  # print cell maps
-  ggsave(paste(out.dir, sp.list[m], "AlphaGridPlot.jpeg"), plot=alph_p1)
-  
-  
-} #end loop
-
+##-----------------------------------------------------------
 #spde analysis 
 
 #Add UTM coords
@@ -842,17 +636,12 @@ dat<-dat %>% dplyr::select("SiteCode", "species_id", "CommonName", "RouteIdentif
 #sp.list<-unique(dat$CommonName)
 
 #create species list for national assessment
-#sp.list<-c("Barred Owl", "Boreal Owl", "Great Gray Owl", "Great Horned Owl", "Long-eared Owl", "Northern Saw-whet Owl", "Flammulated Owl", "Eastern Screech-Owl")
 sp.list<-c("Boreal Owl", "Barred Owl", "Great Horned Owl", "Northern Saw-whet Owl")
 
 #load species names list
 sp.names<-meta_species_taxonomy()
 sp.names<-sp.names %>% dplyr::select(species_id, english_name, scientific_name)
 
-#if(collection == "ATOWLS"){
-#  events$StateProvince<- "Atlantic"
-#  dat$StateProvince<-"Atlantic"
-#}
 
 ##----------------------------------------------------------
 #Create species analysis loop
@@ -909,8 +698,8 @@ for(m in 1:length(sp.list)) {
       obs = seq_len(nrow(.)),
       site_idx = as.numeric(factor(paste(RouteIdentifier))),
       # stops = nstop,
-      year_idx = as.numeric(factor(survey_year))) %>% 
-    # site_year_idx = paste0(RouteIdentifier, "-", survey_year)) %>% 
+    year_idx = as.numeric(factor(survey_year)), 
+    site_year_idx = paste0(RouteIdentifier, "-", survey_year)) %>% 
     st_as_sf(coords = c("longitude", "latitude"), crs = 4326, remove = FALSE) %>%
     st_transform(epsg6703km) %>%
     mutate(
@@ -972,18 +761,7 @@ for(m in 1:length(sp.list)) {
     prior.sigma = c(1, 0.5)
   )
   
-  # plot mesh and save to file
-  meshmap2<-ggplot() +
-    gg(data = mesh2) +
-    geom_sf(data = qq, fill = NA) +
-    geom_sf(data = site_map, col = "black", size = 1) +
-    theme_map() + theme(panel.grid.major=element_line(colour="transparent"))  
-  
-  pdf(paste(out.dir, sp, "_MeshPlot.pdf", sep=""))
-  plot(meshmap2)
-  while(!is.null(dev.list())) dev.off()
-  
-  
+ 
   ##-----------------------------------------------------------
   #Model Formula
   
@@ -1474,241 +1252,4 @@ for(m in 1:length(sp.list)) {
   
   # }#end boreal loop
 }#end species loop
-
-# compare CI width
-
-#com<-read.csv("output/QC/NOS_TrendsSlope.csv")
-#com<-com %>% mutate(width_ci=upper_ci-lower_ci)
-#com<-com %>% filter(model_type!="PROV")
-#com<-com %>% filter(area_code != "QC")
-#com<-com %>% mutate(CommonName = ifelse(species_id==43362, "Barred Owl", #ifelse(species_id==32671, "Great Horned Owl", ifelse(species_id==7680, "Northern Saw-whet #Owl", "Boreal Owl"))))
-
-post_route<-read.csv("output/QC/PosteriorSummaryRoute.csv")
-post_route<-post_route %>% drop_na()
-post_route<-post_route %>% select(RouteIdentifier, tau, lower_ci, upper_ci, CommonName)
-route_10<-read.csv("output/QC/Route10yrList.csv")
-route_10<-route_10 %>% drop_na()
-
-post_grid<-read.csv("output/QC/PosteriorSummary.csv")
-post_grid<-post_grid %>% drop_na()
-post_grid<-post_grid %>% dplyr::rename(CommonName=taxa_code, lower_ci=tau_ll, upper_ci=tau_ul)
-post_grid<-post_grid %>% select(id,  tau, lower_ci, upper_ci, CommonName)
-
-sp.list<-unique(plot_route$CommonName)
-
-route10_postsum<- as.data.frame(matrix(data = NA, nrow = 1, ncol = 5, byrow = FALSE, dimnames = NULL))
-names(route10_postsum) <- c("RouteIdentifier", "tau", "lower_ci", "upper_ci", "CommonName")
-write.table(route10_postsum, file = paste(out.dir, "Route10yrPostSum.csv", sep=""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
-for(m in 1:length(sp.list)) {
-  #m<-1 #for testing each species
-  
-  plot.data <-NULL 
-  plot.data <- post_route %>% filter(CommonName %in% sp.list[m])
-  
-  route.data<-NULL
-  route.data<-route_10 %>% filter(CommonName %in% sp.list[m])
-  route.list<-unique(route.data$RouteIdentifier)
-  
-  plot.data<-plot.data %>% filter(RouteIdentifier %in% route.list)
-  
-  write.table(plot.data, paste(out.dir, "Route10yrPostSum.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
-}
-
-post_sum<-read.csv("output/QC/Route10yrPostSum.csv")
-post_sum<-post_sum %>% drop_na()
-post_sum<-post_sum %>% dplyr::rename(id=RouteIdentifier)
-post_sum$model<-"SPDE"
-post_grid$model<-"iCAR"
-post_sum<-rbind(post_sum, post_grid)
-
-post_sum<-post_sum %>% filter(CommonName != "Boreal Owl")
-post_sum<-post_sum %>% mutate(width_ci = upper_ci-lower_ci)
-
-ggplot(post_sum, aes(x = width_ci, y = model, fill=CommonName)) +
-  scale_fill_brewer(breaks = post_sum$CommonName, palette="Greys")+
-  geom_boxplot()+
-  labs(x = "Precision of the trend estimate", y = "") +
-  theme_classic()+
-  theme(text=element_text(size=20))
-
-
-#Plot Route Tau and Alpha 
-#Identify routes with at least 10 years of data for plotting
-
-#Posterior Summary
-route10<- as.data.frame(matrix(data = NA, nrow = 1, ncol = 3, byrow = FALSE, dimnames = NULL))
-names(route10) <- c("RouteIdentifier", "CommonName", "species_id")
-write.table(route10, file = paste(out.dir, "Route10yrList.csv", sep=""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
-
-for(m in 1:length(sp.list)) {
-  #m<-1 #for testing each species
-  
-  sp.data <-NULL 
-  sp.data <- dplyr::filter(dat, CommonName == sp.list[m]) %>%
-    droplevels()
-  sp<-sp.list[m] 
-  sp.id<-unique(sp.data$species_id)
-  
-  print(paste("Currently analyzing species ", m, "/", sp.list[m], sep = "")) 
-  
-  ##-----------------------------------------------------------
-  #zero fill by merging with the events dataframe. 
-  sp.data <- left_join(events, sp.data, by = c("SiteCode", "RouteIdentifier", "survey_year"), multiple="all") %>% mutate(ObservationCount = replace(ObservationCount, is.na(ObservationCount), 0)) 
-  
-  #sp.data$StateProvince<-StateProv
-  
-  ##-----------------------------------------------------------
-  #Remove routes that do not have at least one observation of the species
-  site.summ <- melt(sp.data, id.var = "RouteIdentifier",	measure.var = "ObservationCount")
-  site.summ <- cast(site.summ, RouteIdentifier ~ variable,	fun.aggregate="sum")
-  site.sp.list <- unique(subset(site.summ, select = c("RouteIdentifier"), ObservationCount >= 1))
-  
-  # Limit raw data to these species, i.e., those that were observed at least once on a route 
-  sp.data <- merge(sp.data, site.sp.list, by = c("RouteIdentifier"))
-  
-  ##-----------------------------------------------------------
-  #Remove 2020 due to COVID
-  sp.data<-sp.data %>% filter(survey_year!=2020)
-  sp.data<-sp.data %>% filter(survey_year!=2021)
-  sp.data$StateProvince<-"QC"
-  
-  ##-----------------------------------------------------------
-  # Count the number of owls per route as the response variable. The number of stop on a route can be used as a covarite in the model to control for route level effort. Not used in Atlantic Canada because route are mostly complete. 
-  sp.data<-sp.data %>% group_by(RouteIdentifier, survey_year, StateProvince, latitude, longitude, Easting, Northing, protocol_id) %>% summarise(count=sum(ObservationCount))
-  sp.data$StateProvince<-"QC"
-  
-  ##-----------------------------------------------------------
-  #Create index variables
-  sp.data <- sp.data %>% mutate(site_idx = factor(paste(RouteIdentifier))) %>% 
-    group_by(site_idx) %>% 
-    mutate(n_years = dplyr::n()) %>%
-    filter(n_years >= 10) %>% 
-    ungroup() %>% 
-    select(RouteIdentifier) %>% 
-    distinct()
-  
-  sp.data$CommonName<-sp
-  sp.data$species_id<-sp.id
-  
-  write.table(sp.data, paste(out.dir, "Route10yrList.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
-  
-}
-
-#plot grid output
-
-# plot theme
-# map theme
-theme_map <- function(base_size = 9, base_family = "") {
-  theme_bw(base_size = base_size, base_family = base_family) %+replace%
-    theme(axis.line = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          axis.title = element_blank(),
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid = element_blank(),
-          panel.spacing = unit(0, "lines"),
-          plot.background = element_blank(),
-          legend.background=element_rect(fill=NA, colour=NA),
-          legend.direction="vertical",
-          legend.key=element_rect(fill=NA, colour="white"),
-          legend.text.align=1,
-          legend.text = element_text(size=9),
-          legend.title=element_text(hjust=0, size=11),
-          legend.justification=c(0, 0.5),
-          plot.title = element_text(size=14, hjust = 0.7))
-}
-
-
-#Make Spatial Grid for iCAR Analysis
-test<-events %>% select(RouteIdentifier, latitude, longitude) %>% distinct()
-
-xy<-st_as_sf(test, coords = c("longitude", "latitude"))
-st_crs(xy)<-"+proj=longlat +datum=NAD83"
-
-#all grid for North American
-poly<- read_sf(dsn="C:/Users/dethier/Documents/ethier-scripts/National-NOS/data", layer="nos_na_grid")
-
-#sf point
-newCRS<-st_crs(poly)
-xy<-st_transform(xy, newCRS)
-
-qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") %>% st_transform(newCRS) #pull in the background map
-qq<-qq %>% filter(name=="Québec")
-
-plot_route<-NULL
-plot_route<-read.csv("output/QC/PosteriorSummaryRoute.csv")
-plot_route<-plot_route %>% drop_na()
-plot_route<-plot_route %>% select(RouteIdentifier, alph, tau, CommonName)
-
-range_route<-plot_route %>% group_by(CommonName) %>% summarise(meanalph=mean(alph), minalph=min(alph), maxalph=max(alph), meantau = mean(tau), mintau = min(tau), maxtau=max(tau))
-write.csv(range_route, "output/QC/Range_Route.csv")
-
-route_10<-read.csv("output/QC/Route10yrList.csv")
-
-
-# make route level maps ---------------------------------------------------------
-
-sp.list<-unique(plot_route$CommonName)
-
-for(m in 1:length(sp.list)) {
-  #m<-1 #for testing each species
-  
-  plot.data <-NULL 
-  plot.data <- plot_route %>% filter(CommonName %in% sp.list[m])
-  
-  route.data<-NULL
-  route.data<-route_10 %>% filter(CommonName %in% sp.list[m])
-  route.list<-unique(route.data$RouteIdentifier)
-  
-  plot.data<-left_join(plot.data, xy, by="RouteIdentifier")
-  plot.data<-plot.data %>% filter(RouteIdentifier %in% route.list)
-  
-  #make plot function
-  tau_p1<-ggplot() +
-    geom_sf(data = qq, fill = NA) +
-    geom_sf() +
-    coord_sf(datum = NA) +  
-    geom_sf(data = plot.data, size = 5, aes(geometry=geometry, colour=tau)) +
-    scale_colour_gradient2("Tau\n(% per year)", low = ("red4"),
-                           mid = "white",
-                           high = ("royalblue4"), midpoint = 0, space = "Lab",
-                           guide = "colourbar") +
-    theme_map() + theme(panel.grid.major=element_line(colour="transparent"))
-  
-  
-  
-  # print cell maps
-  ggsave(paste(out.dir, sp.list[m], "TauRoutePlot.jpeg"), plot=tau_p1)
-  
-  
-  # map alpha
-  alph_p1<-ggplot() +
-    geom_sf(data = qq, fill = NA) +
-    geom_sf() +
-    coord_sf(datum = NA) +  
-    geom_sf(data = plot.data, size = 5, aes(geometry=geometry, colour=alph)) +
-    scale_colour_gradient2("Alpha", low = "orange", mid = "white",
-                           high = "green4", midpoint = 0, space = "Lab",
-                           na.value = "grey40", guide = "colourbar") +
-    theme_map() + theme(panel.grid.major=element_line(colour="transparent"))    
-  
-  # print cell maps
-  ggsave(paste(out.dir, sp.list[m], "AlphaRoutePlot.jpeg"), plot=alph_p1)
-  
-  
-} #end loop
-
-##Compare means and ranges
-
-range_grid <-range_grid %>% dplyr::rename(CommonName=taxa_code)
-range_grid$model<-"iCAR"
-range_route$model<-"SPDE"
-range_all<-rbind(range_grid, range_route)
-
-ggplot(range_all)+
-  geom_line(aes(x=model, y=meanalph, group=CommonName, colour=CommonName))+
-  geom_errorbar(aes(ymin=minalph, ymax=maxalph, group=CommonName))+
-  theme_classic()
 
