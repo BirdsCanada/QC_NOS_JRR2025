@@ -1,0 +1,26 @@
+# Introduction {#Intro1}
+
+```{r tidyr1, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy = FALSE)
+
+```
+
+## Fifteen years of volunteer-led owl monitoring in southern Québec reveals fine-scale patterns in population abundance trends.
+
+### Abstract
+
+Data on nocturnal owls are often insufficient to make broad-scale assessments of population status or set local conservation targets. To achieve these objectives, targeted surveys combined with modern analytical techniques are required. Using data from a 15-year (2008–2023) nocturnal owl survey, we assessed route-level, regional, and provincial relative abundance trends for Barred Owl (Strix varia), Boreal Owl (Aegolius funereus), Northern Saw-Whet Owl (Aegolius acadicus), and Great Horned Owl (Bubo virginianus) in the southern portion of Québec using continuous- and discrete-space spatially explicit modeling approaches. Results from this study clearly reflect spatial patterns in owl trends at finer scales than previously reported. For example, significantly negative route-level trends were detected once for Great Horned Owl (of 21, 5%) and across 20 routes for Northern Saw-Whet Owl (of 25, 80%). In contrast, Great Horned Owl and Northern Saw-Whet Owl had significant negative regional trends in nine (of 33, 26%) and 23 (of 34, 70%) 100 km x 100 km grid cells, respectively. Posterior median values for the temporal trend across the study area suggest some evidence that Northern Saw-Whet Owl (annual percent change: -4.23, credible interval: -9.30 – 3.05) and Great Horned Owl (-3.76, -13.36 – 7.89) populations were in decline, and Barred Owl (1.16, -2.18 – 5.63) and Boreal Owl (2.92, -14.05 – 28.00) populations were increasing, although none significantly. The increased spatial resolution of trends presented herein are discussed in the context of creating enhanced opportunities to test hypotheses of drivers of change to facilitate the development of locally tailored conservation plans.
+
+### Keywords
+
+Nocturnal Owl Survey; spatially explicit model; spatially varying coefficient approach; status assessment; wildlife management
+
+### Analytical Code
+
+The code presented here helps users reproduce the analysis published in Ethier et al. 2025 in the Journal of Raptor Research. The code will help users access and manipulate the Québec Nocturnal Owls Survey dataset, housed in Birds Canada's national data centre: [NatureCounts](www.naturecounts.ca) and run the SPDE and iCAR analysis.
+
+### Acknowledgements
+
+We thank all the volunteers who have participated in the Québec Nocturnal Owl Survey, without whom this research would not have been possible. We also acknowledge the financial support of Bird Protection Québec and the TD Friends of the Environment Foundation, which enabled the establishment of the project, and thank the Canadian Wildlife Service of Environment and Climate Change Canada, for in-kind support since the beginning of the survey. Finally, we thank the Ministère de l’Environnement, de la Lutte contre les changements climatiques, de la Faune et des Parcs for providing funding for this study and for project coordination. This article is dedicated to the memory of Mabel Aston McIntosh. For more than half a century, Mabel devoted thousands of hours to studying and protecting birds in Québec by conducting bird-banding projects, migration research and annual bird counts. As an expert in the field of ornithology, she made invaluable contributions to Bird Protection Quebec, Bird Studies Canada (now Birds Canada) and the Hawk Migration Association of North America. During her life, she was a recipient of the Sovereign's Medal for Volunteers in recognition for her dedication to volunteerism and community service.

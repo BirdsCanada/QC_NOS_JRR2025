@@ -1,0 +1,86 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Getting Started {#DataManip3}
+
+```{r tidyr3, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy = FALSE)
+
+```
+
+## Setup
+
+The setup files will get you ready for your analysis. It loads you libraries, needed tables, created directories for your outputs, and assigns some parameter values. 
+
+
+```{r setup}
+
+min.yr <-2018
+max.yr <- 2023 #needs changes with each analysis
+
+ID<- "YOURUSERNAME" #change this to your NatureCounts user ID. You will need to request permission to access the QC NOS data from the NatureCounts.  
+req_id = 21345 #Enter your QCNOS request it to your received from NatureCounts to download the data.
+
+source("00-setup.R") #loads packages on other need files for the analysis
+
+#load the map layer
+qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") %>% st_transform(epsg6703km) 
+qq<-qq %>% filter(name=="Québec")
+
+```
+
+## Choose a collection to be downloaded and prepare the provincial basemap
+
+```{r downloaddata, echo = TRUE, message = FALSE}
+
+#list the collections
+list.coll<-unique(anal.param$collection)
+list.prot<-unique(anal.param$protocol_id)
+
+#select your collection manually for data cleaning
+collection <- "QCOWLS"
+
+```
+
+## Output Tables
+
+Create the output tables. This only needs to be done once per analysis
+
+```{r data manip}
+
+source("i-output.R") #Total count period output tables
+```
+
+
+## Data manipulations 
+
+```{r data manip}
+
+source("ii-datamanip.R") #You will be prompted for you NatureCounts password. 
+
+#Because the code looks to see if you have a copy of the data saved first, you may get an error message. This is normal.
+#As long as you have output (Events, Map, DataClean) in your `Output` folder, you can ignore this message.
+
+```
+
+## Data Analysis
+
+```{r analysis}
+
+source("iii-QCAnalysis.R")
+
+```
+
+## Plot Trends 
+
+```{r Plot trends}
+
+source("iv_plots.R")
+
+```
+
